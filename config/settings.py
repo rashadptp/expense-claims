@@ -1,7 +1,7 @@
 """
 Django settings for the petty-cash expense & claims tracker.
 
-Kept intentionally simple for a take-home demo:
+Kept intentionally simple for the demo:
   - SQLite (zero setup); swap DATABASES for PostgreSQL in production.
   - Synchronous AI receipt processing; swap in Celery for production.
 Secrets and tunables are read from a .env file (see .env.example).
