@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Admin console · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+
+<h1 class="text-2xl font-semibold mb-1">Admin console</h1>
+<p class="text-slate-500 text-sm mb-6">Manage people, roles, branches and budgets.</p>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+  {% include "claims/_stat.html" with label="Users" value=stats.users color="slate" %}
+  {% include "claims/_stat.html" with label="Branches" value=stats.branches color="blue" %}
+  {% include "claims/_stat.html" with label="Open claims" value=stats.open_claims color="amber" %}
+  <div class="bg-white rounded-2xl shadow p-4">
+    <div class="text-3xl font-semibold text-green-600">
+      {{ CURRENCY }} {{ stats.paid_total|floatformat:2|intcomma }}
+    </div>
+    <div class="text-xs uppercase tracking-wide text-slate-400 mt-1">Total paid</div>
+  </div>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+  <section class="lg:col-span-2 bg-white rounded-2xl shadow p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-semibold">Quick actions</h2>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-3">
+      <a href="{% url 'manage_user_create' %}" class="border border-slate-200 rounded-xl p-4 hover:border-indigo-300 hover:bg-indigo-50/40">
+        <div class="text-2xl">👤</div>
+        <div class="font-medium mt-1">Create user</div>
+        <div class="text-xs text-slate-400">Add an employee, manager, finance or accounts user.</div>
+      </a>
+      <a href="{% url 'manage_users' %}" class="border border-slate-200 rounded-xl p-4 hover:border-indigo-300 hover:bg-indigo-50/40">
+        <div class="text-2xl">🧑‍🤝‍🧑</div>
+        <div class="font-medium mt-1">Manage users</div>
+        <div class="text-xs text-slate-400">Set roles, branches, activate / deactivate.</div>
+      </a>
+      <a href="{% url 'manage_branch_create' %}" class="border border-slate-200 rounded-xl p-4 hover:border-indigo-300 hover:bg-indigo-50/40">
+        <div class="text-2xl">🏢</div>
+        <div class="font-medium mt-1">Create branch</div>
+        <div class="text-xs text-slate-400">Add a location with a monthly budget.</div>
+      </a>
+      <a href="{% url 'manage_branches' %}" class="border border-slate-200 rounded-xl p-4 hover:border-indigo-300 hover:bg-indigo-50/40">
+        <div class="text-2xl">📊</div>
+        <div class="font-medium mt-1">Manage branches</div>
+        <div class="text-xs text-slate-400">Edit budgets and monthly spend.</div>
+      </a>
+    </div>
+  </section>
+
+  <section class="bg-white rounded-2xl shadow p-5">
+    <h2 class="font-semibold mb-3">People by role</h2>
+    <div class="space-y-2 text-sm">
+      {% for role, count in role_counts.items %}
+      <div class="flex justify-between">
+        <span class="text-slate-500">{{ role }}</span>
+        <span class="font-semibold">{{ count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+{% endblock %}

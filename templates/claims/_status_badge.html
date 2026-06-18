@@ -1,0 +1,12 @@
+{% comment %}Expects: status (value), label. Renders a coloured pill.{% endcomment %}
+<span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium
+  {% if status == 'PAID' %}bg-green-100 text-green-700
+  {% elif status == 'APPROVED' %}bg-emerald-100 text-emerald-700
+  {% elif status == 'REJECTED' %}bg-red-100 text-red-700
+  {% elif status == 'AI_FLAGGED' %}bg-amber-100 text-amber-700
+  {% elif status == 'MANAGER_REVIEW' %}bg-blue-100 text-blue-700
+  {% elif status == 'FINANCE_REVIEW' %}bg-cyan-100 text-cyan-700
+  {% elif status == 'ACCOUNTS_REVIEW' %}bg-violet-100 text-violet-700
+  {% else %}bg-slate-200 text-slate-600{% endif %}">
+  {{ label }}
+</span>

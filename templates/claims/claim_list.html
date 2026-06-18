@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}All Claims · Petty Cash Tracker{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-4">
+  <h1 class="text-2xl font-semibold">{% if user.is_employee %}My Claims{% else %}Claims{% endif %}</h1>
+  {% if user.is_employee or user.is_admin_role %}
+  <a href="{% url 'claim_create' %}"
+     class="bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-indigo-800">
+    + New Claim
+  </a>
+  {% endif %}
+</div>
+
+<form method="get" class="flex flex-wrap gap-2 mb-4">
+  <select name="status" onchange="this.form.submit()"
+          class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+    <option value="">All statuses</option>
+    {% for value, label in statuses %}
+      <option value="{{ value }}" {% if value == selected_status %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  {% if selected_status %}
+    <a href="{% url 'claim_list' %}" class="text-sm text-slate-500 px-3 py-2 hover:underline">Clear</a>
+  {% endif %}
+</form>
+
+<div class="bg-white rounded-2xl shadow p-5">
+  {% include "claims/_claim_rows.html" with claims=claims %}
+</div>
+
+{% endblock %}

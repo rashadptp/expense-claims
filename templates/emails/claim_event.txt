@@ -1,0 +1,17 @@
+{{ heading }}
+
+{{ message }}
+{% if comment %}
+Reason / comment: {{ comment }}
+{% endif %}
+Claim:    #{{ claim.pk }}
+Total:    {{ claim.currency }} {{ claim.total_amount }}
+Receipts: {{ claim.item_count }}
+Branch:   {{ claim.branch.name }}
+Status:   {{ claim.get_status_display }}
+
+{% if action_url %}Approve or reject this claim (no login needed): {{ action_url }}{% else %}View the claim: {{ url }}{% endif %}
+
+—
+{{ site_name }} · Automated expense & claims management
+This is an automated message; please do not reply.

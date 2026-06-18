@@ -1,0 +1,31 @@
+{% load humanize %}
+{% if claims %}
+<div class="divide-y divide-slate-100">
+  {% for c in claims %}
+  <a href="{% url 'claim_detail' c.pk %}"
+     class="flex items-center justify-between py-3 hover:bg-slate-50 -mx-2 px-2 rounded-lg">
+    <div class="min-w-0">
+      <div class="flex items-center gap-2">
+        <span class="font-medium">#{{ c.pk }}</span>
+        <span class="text-sm text-slate-500 truncate">
+          {{ c.item_count }} receipt{{ c.item_count|pluralize }} ·
+          {{ c.employee.get_full_name|default:c.employee.username }}
+        </span>
+        {% if c.has_flags %}
+          <span class="text-amber-500 text-xs" title="AI flags">⚑ {{ c.ai_flags|length }}</span>
+        {% endif %}
+      </div>
+      <div class="text-xs text-slate-400">
+        {{ c.branch.name }}{% if c.title %} · {{ c.title }}{% endif %}
+      </div>
+    </div>
+    <div class="text-right shrink-0 ml-4">
+      <div class="font-semibold">{{ c.currency }} {{ c.total_amount|floatformat:2|intcomma }}</div>
+      {% include "claims/_status_badge.html" with status=c.status label=c.get_status_display %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<p class="text-sm text-slate-400 py-6 text-center">No claims yet.</p>
+{% endif %}

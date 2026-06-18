@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Approvals · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+
+<h1 class="text-2xl font-semibold mb-1">Approvals queue</h1>
+<p class="text-slate-500 text-sm mb-6">
+  Tick the claims you want to approve and click <b>Approve selected</b>. To send
+  some back, tick them, type a reason, and click <b>Reject selected</b>.
+</p>
+
+{% if queue %}
+<form method="post" id="approvalsForm">
+  {% csrf_token %}
+
+  <div class="bg-white rounded-2xl shadow overflow-hidden">
+    <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 text-sm">
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" id="selectAll" class="rounded border-slate-300">
+        <span class="text-slate-500">Select all</span>
+      </label>
+      <span class="ml-auto text-slate-400">{{ queue|length }} awaiting you</span>
+    </div>
+
+    <div class="divide-y divide-slate-100">
+      {% for c in queue %}
+      <label class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 cursor-pointer">
+        <input type="checkbox" name="claim_ids" value="{{ c.pk }}" class="rowcheck rounded border-slate-300">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <span class="font-medium">#{{ c.pk }}</span>
+            <span class="text-sm text-slate-500 truncate">
+              {{ c.item_count }} receipt{{ c.item_count|pluralize }} ·
+              {{ c.employee.get_full_name|default:c.employee.username }}
+            </span>
+            {% if c.has_flags %}<span class="text-amber-500 text-xs" title="AI flags">⚑ {{ c.ai_flags|length }}</span>{% endif %}
+          </div>
+          <div class="text-xs text-slate-400">{{ c.branch.name }} · AI score {{ c.ai_score|default:"n/a" }}/100</div>
+        </div>
+        <div class="text-right shrink-0">
+          <div class="font-semibold">{{ c.currency }} {{ c.total_amount|floatformat:2|intcomma }}</div>
+          {% include "claims/_status_badge.html" with status=c.status label=c.get_status_display %}
+        </div>
+        <a href="{% url 'claim_detail' c.pk %}" class="text-indigo-600 text-xs hover:underline shrink-0 ml-1" onclick="event.stopPropagation()">view</a>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow p-4 mt-4">
+    <label class="block text-sm font-medium mb-1">Rejection reason <span class="text-slate-400">(required to reject)</span></label>
+    <textarea name="reason" rows="2"
+      class="w-full rounded-lg border border-slate-300 px-3 py-2"
+      placeholder="e.g. Receipt unreadable — please re-upload a clearer photo."></textarea>
+
+    <div class="flex flex-col sm:flex-row gap-2 mt-3">
+      <button name="action" value="approve"
+        class="flex-1 bg-green-600 text-white font-medium py-2.5 rounded-lg hover:bg-green-700">
+        ✓ Approve selected
+      </button>
+      <button name="action" value="reject"
+        class="flex-1 bg-red-600 text-white font-medium py-2.5 rounded-lg hover:bg-red-700">
+        ✕ Reject selected (with reason)
+      </button>
+    </div>
+  </div>
+</form>
+
+<script>
+  var all = document.getElementById('selectAll');
+  var rows = document.querySelectorAll('.rowcheck');
+  all.addEventListener('change', function () {
+    rows.forEach(function (r) { r.checked = all.checked; });
+  });
+</script>
+{% else %}
+<div class="bg-white rounded-2xl shadow p-10 text-center text-slate-400">
+  Nothing is waiting on you right now. 🎉
+</div>
+{% endif %}
+
+{% endblock %}

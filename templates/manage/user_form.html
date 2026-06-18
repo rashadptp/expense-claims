@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{% if creating %}New user{% else %}Edit user{% endif %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+
+<div class="max-w-2xl mx-auto">
+  <a href="{% url 'manage_users' %}" class="text-sm text-slate-500 hover:underline">&larr; Users</a>
+  <h1 class="text-2xl font-semibold mt-1 mb-6">
+    {% if creating %}Create user{% else %}Edit {{ obj.username }}{% endif %}
+  </h1>
+
+  <form method="post" class="bg-white rounded-2xl shadow p-6 space-y-5">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="bg-red-100 text-red-800 text-sm px-3 py-2 rounded-lg">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Username</label>
+        {{ form.username }}
+        {% if form.username.errors %}<p class="text-red-600 text-xs mt-1">{{ form.username.errors|striptags }}</p>{% endif %}
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Email</label>
+        {{ form.email }}
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">First name</label>
+        {{ form.first_name }}
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Last name</label>
+        {{ form.last_name }}
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Role</label>
+        {{ form.role }}
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Branch</label>
+        {{ form.branch }}
+        {% if form.branch.errors %}<p class="text-red-600 text-xs mt-1">{{ form.branch.errors|striptags }}</p>{% endif %}
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">Password</label>
+      {{ form.password }}
+      <p class="text-xs text-slate-400 mt-1">{{ form.password.help_text }}</p>
+      {% if form.password.errors %}<p class="text-red-600 text-xs mt-1">{{ form.password.errors|striptags }}</p>{% endif %}
+    </div>
+
+    <label class="flex items-center gap-2 text-sm">
+      {{ form.is_active }} Active (can sign in)
+    </label>
+
+    <div class="flex items-center gap-3 pt-2">
+      <button class="bg-indigo-700 text-white font-medium px-5 py-2.5 rounded-lg hover:bg-indigo-800">
+        {% if creating %}Create user{% else %}Save changes{% endif %}
+      </button>
+      <a href="{% url 'manage_users' %}" class="text-slate-500 text-sm hover:underline">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

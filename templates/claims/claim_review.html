@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Review Claim · Petty Cash Tracker{% endblock %}
+{% block content %}
+
+<div class="max-w-5xl mx-auto">
+  <h1 class="text-2xl font-semibold mb-1">Review &amp; edit</h1>
+  <p class="text-slate-500 text-sm mb-6">
+    Claude read {{ claim.item_count }} receipt{{ claim.item_count|pluralize }}.
+    Check each line and fix anything that's wrong — the total updates as you type.
+  </p>
+
+  <form method="post" id="reviewForm">
+    {% csrf_token %}
+    {{ formset.management_form }}
+
+    {% if formset.non_form_errors %}
+      <div class="bg-red-100 text-red-800 text-sm px-3 py-2 rounded-lg mb-4">
+        {{ formset.non_form_errors }}
+      </div>
+    {% endif %}
+
+    <div class="space-y-4">
+      {% for form, receipt in rows %}
+      <div class="bg-white rounded-2xl shadow p-4 grid md:grid-cols-[140px,1fr] gap-4 review-row">
+        {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+
+        <!-- receipt thumbnail + what AI read -->
+        <div>
+          {% if receipt and receipt.image %}
+            <a href="{{ receipt.image.url }}" target="_blank">
+              <img src="{{ receipt.image.url }}" alt="Receipt"
+                   class="rounded-lg border border-slate-200 h-32 w-full object-contain bg-slate-50">
+            </a>
+          {% endif %}
+          <div class="text-[11px] text-slate-400 mt-1 leading-tight">
+            AI read:
+            {% if receipt.ai_amount %}{{ receipt.ai_currency|default:claim.currency }} {{ receipt.ai_amount }}{% else %}no total{% endif %}
+            · {{ receipt.ai_provider|default:"—" }}
+          </div>
+        </div>
+
+        <!-- editable fields -->
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-medium text-slate-500 mb-1">Vendor</label>
+            {{ form.vendor }}
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Category</label>
+            {{ form.category }}
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Date</label>
+            {{ form.expense_date }}
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Amount ({{ claim.currency }})</label>
+            {{ form.amount }}
+            {% if form.amount.errors %}<p class="text-red-600 text-xs mt-1">{{ form.amount.errors|striptags }}</p>{% endif %}
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Note</label>
+            {{ form.description }}
+          </div>
+          {% if form.DELETE %}
+          <label class="sm:col-span-2 inline-flex items-center gap-2 text-xs text-red-600 mt-1">
+            {{ form.DELETE }} Remove this receipt from the claim
+          </label>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- sticky total + submit -->
+    <div class="sticky bottom-0 mt-6 bg-white rounded-2xl shadow-lg border border-slate-100 p-4
+                flex items-center justify-between">
+      <div>
+        <span class="text-sm text-slate-500">Total ({{ claim.item_count }} receipts)</span>
+        <div class="text-2xl font-bold">{{ claim.currency }} <span id="grandTotal">0.00</span></div>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="{% url 'claim_create' %}" class="text-slate-500 text-sm hover:underline">Start over</a>
+        <button class="bg-green-600 text-white font-medium px-6 py-2.5 rounded-lg hover:bg-green-700">
+          Submit for approval
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+  function recalc() {
+    let total = 0;
+    document.querySelectorAll(".review-row").forEach(row => {
+      const del = row.querySelector('input[type=checkbox][name$="-DELETE"]');
+      if (del && del.checked) { row.style.opacity = .4; return; }
+      if (del) row.style.opacity = 1;
+      const amt = row.querySelector(".js-amount");
+      const v = parseFloat(amt && amt.value);
+      if (!isNaN(v)) total += v;
+    });
+    document.getElementById("grandTotal").textContent =
+      total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  }
+  document.addEventListener("input", e => { if (e.target.matches(".js-amount")) recalc(); });
+  document.addEventListener("change", e => { if (e.target.matches('input[name$="-DELETE"]')) recalc(); });
+  recalc();
+</script>
+{% endblock %}

@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Claim #{{ claim.pk }} · Petty Cash Tracker{% endblock %}
+{% block content %}
+
+<a href="{% url 'claim_list' %}" class="text-sm text-slate-500 hover:underline">&larr; Back to claims</a>
+
+<div class="flex items-start justify-between mt-2 mb-6">
+  <div>
+    <h1 class="text-2xl font-semibold">
+      Claim #{{ claim.pk }}{% if claim.title %} · {{ claim.title }}{% endif %}
+    </h1>
+    <p class="text-slate-500 text-sm">
+      {{ claim.employee.get_full_name|default:claim.employee.username }} ·
+      {{ claim.branch.name }} · submitted {{ claim.created_at|naturaltime }}
+    </p>
+  </div>
+  <div class="flex items-center gap-3">
+    <a href="{% url 'claim_pdf' claim.pk %}"
+       class="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 12l-4-4m4 4l4-4M4 20h16"/>
+      </svg>
+      Download PDF
+    </a>
+    {% include "claims/_status_badge.html" with status=claim.status label=claim.get_status_display %}
+  </div>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+  <!-- Left: line items + audit -->
+  <div class="lg:col-span-2 space-y-6">
+
+    <section class="bg-white rounded-2xl shadow p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold">Receipts ({{ claim.item_count }})</h2>
+        <div class="text-right">
+          <div class="text-xs text-slate-400 uppercase tracking-wide">Total</div>
+          <div class="text-xl font-bold">{{ claim.currency }} {{ claim.total_amount|floatformat:2|intcomma }}</div>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-slate-400 border-b border-slate-100">
+              <th class="py-2 font-medium">Receipt</th>
+              <th class="py-2 font-medium">Vendor</th>
+              <th class="py-2 font-medium">Category</th>
+              <th class="py-2 font-medium">Date</th>
+              <th class="py-2 font-medium text-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for item in items %}
+            <tr class="{% if item.is_rejected %}opacity-60{% endif %}">
+              <td class="py-2">
+                {% if item.receipt and item.receipt.image %}
+                  <a href="{{ item.receipt.image.url }}" target="_blank">
+                    <img src="{{ item.receipt.image.url }}" class="h-12 w-12 object-cover rounded border border-slate-200">
+                  </a>
+                {% else %}—{% endif %}
+              </td>
+              <td class="py-2">
+                <span class="{% if item.is_rejected %}line-through text-slate-400{% endif %}">{{ item.vendor|default:"—" }}</span>
+                {% if item.is_duplicate %}<span class="text-red-500 text-xs" title="Possible duplicate">⚠</span>{% endif %}
+                {% if item.edited %}<span class="text-slate-400 text-xs" title="Edited by employee">✎</span>{% endif %}
+                {% if item.is_rejected %}
+                  <span class="block text-xs text-red-500">Rejected{% if item.reject_reason %} · {{ item.reject_reason }}{% endif %}</span>
+                {% endif %}
+              </td>
+              <td class="py-2">{{ item.get_category_display }}</td>
+              <td class="py-2">{{ item.expense_date|default:"—" }}</td>
+              <td class="py-2 text-right font-medium {% if item.is_rejected %}line-through text-slate-400{% endif %}">{{ item.currency }} {{ item.amount|floatformat:2|intcomma }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr class="border-t-2 border-slate-200 font-semibold">
+              <td class="py-2" colspan="4">Total</td>
+              <td class="py-2 text-right">{{ claim.currency }} {{ claim.total_amount|floatformat:2|intcomma }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      {% if claim.description %}
+        <p class="text-sm text-slate-500 mt-4">{{ claim.description }}</p>
+      {% endif %}
+    </section>
+
+    <!-- Audit trail -->
+    <section class="bg-white rounded-2xl shadow p-5">
+      <h2 class="font-semibold mb-4">Audit trail</h2>
+      <ol class="relative border-l border-slate-200 ml-2 space-y-4">
+        {% for log in logs %}
+        <li class="ml-4">
+          <span class="absolute -left-1.5 w-3 h-3 rounded-full
+            {% if log.action == 'REJECTED' %}bg-red-500{% elif log.action == 'PAID' %}bg-green-500{% else %}bg-indigo-500{% endif %}"></span>
+          <div class="text-sm">
+            <span class="font-medium">{{ log.get_action_display }}</span>
+            {% if log.actor %}<span class="text-slate-500">by {{ log.actor.get_full_name|default:log.actor.username }}</span>
+            {% else %}<span class="text-slate-400">(system)</span>{% endif %}
+            <span class="text-slate-400">· {{ log.created_at|naturaltime }}</span>
+          </div>
+          {% if log.from_status and log.to_status and log.from_status != log.to_status %}
+            <div class="text-xs text-slate-400">{{ log.from_status }} → {{ log.to_status }}</div>
+          {% endif %}
+          {% if log.comment %}<div class="text-sm text-slate-600 mt-0.5">“{{ log.comment }}”</div>{% endif %}
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+  </div>
+
+  <!-- Right: AI score, flags, actions -->
+  <div class="space-y-6">
+    <section class="bg-white rounded-2xl shadow p-5">
+      <h2 class="font-semibold mb-3">AI validation</h2>
+      {% if claim.ai_score is not None %}
+        <div class="flex items-end gap-2">
+          <span class="text-4xl font-bold
+            {% if claim.ai_score >= 80 %}text-green-600{% elif claim.ai_score >= 50 %}text-amber-600{% else %}text-red-600{% endif %}">
+            {{ claim.ai_score }}
+          </span>
+          <span class="text-slate-400 mb-1">/ 100</span>
+        </div>
+      {% else %}
+        <p class="text-sm text-slate-400">Not scored.</p>
+      {% endif %}
+
+      {% if claim.ai_flags %}
+        <ul class="mt-4 space-y-2">
+          {% for f in claim.ai_flags %}
+          <li class="text-sm flex gap-2">
+            <span>{% if f.severity == 'critical' %}🔴{% else %}🟡{% endif %}</span>
+            <span>{% if f.item %}<span class="text-slate-400">[{{ f.item }}]</span> {% endif %}{{ f.message }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-sm text-green-600 mt-3">✓ No issues detected.</p>
+      {% endif %}
+    </section>
+
+    {% if can_act %}
+    <section class="bg-white rounded-2xl shadow p-5">
+      <h2 class="font-semibold mb-3">Your decision</h2>
+      <form method="post" action="{% url 'claim_decision' claim.pk %}" class="space-y-3">
+        {% csrf_token %}
+
+        {% if active_items|length > 1 %}
+        <input type="hidden" name="itemized" value="1">
+        <div class="border border-slate-200 rounded-lg p-3">
+          <p class="text-xs text-slate-500 mb-2">
+            Tick the receipts to approve. Any you untick are rejected (give a reason
+            below); the approved total recalculates automatically.
+          </p>
+          <ul class="space-y-1.5" id="approveList">
+            {% for item in active_items %}
+            <li class="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="approved_items" value="{{ item.pk }}" checked
+                     data-amount="{{ item.amount|stringformat:'f' }}"
+                     class="js-approve rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+              <span class="flex-1">{{ item.vendor|default:"Receipt" }}
+                <span class="text-slate-400">· {{ item.get_category_display }}</span>
+              </span>
+              <span class="font-medium">{{ item.currency }} {{ item.amount|floatformat:2|intcomma }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          <div class="flex items-center justify-between border-t border-slate-200 mt-3 pt-2 text-sm">
+            <span class="text-slate-500">
+              Approved total
+              <span id="approveCount" class="text-slate-400"></span>
+            </span>
+            <span class="flex items-center gap-2">
+              <svg id="approveSpin" class="hidden w-4 h-4 text-indigo-500 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+              </svg>
+              <span id="approveTotal" class="font-bold text-base">{{ claim.currency }} {{ claim.total_amount|floatformat:2|intcomma }}</span>
+            </span>
+          </div>
+        </div>
+
+        <script>
+        (function () {
+          const boxes = Array.from(document.querySelectorAll(".js-approve"));
+          const totalEl = document.getElementById("approveTotal");
+          const countEl = document.getElementById("approveCount");
+          const spin = document.getElementById("approveSpin");
+          const currency = "{{ claim.currency }}";
+          let timer = null;
+
+          function fmt(n) {
+            return currency + " " + n.toLocaleString(undefined, {
+              minimumFractionDigits: 2, maximumFractionDigits: 2,
+            });
+          }
+          function recalc() {
+            // brief "recalculating" animation before showing the new figure
+            spin.classList.remove("hidden");
+            totalEl.classList.add("opacity-40");
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+              let sum = 0, n = 0;
+              boxes.forEach(b => { if (b.checked) { sum += parseFloat(b.dataset.amount); n++; } });
+              totalEl.textContent = fmt(sum);
+              countEl.textContent = "(" + n + " of " + boxes.length + " receipts)";
+              spin.classList.add("hidden");
+              totalEl.classList.remove("opacity-40");
+            }, 350);
+          }
+          boxes.forEach(b => b.addEventListener("change", recalc));
+          recalc();
+        })();
+        </script>
+        {% endif %}
+
+        {{ decision_form.comment }}
+        <div class="flex gap-2">
+          <button name="action" value="approve"
+                  class="flex-1 bg-green-600 text-white font-medium py-2.5 rounded-lg hover:bg-green-700">
+            {{ next_label|default:"Approve" }}
+          </button>
+          <button name="action" value="reject"
+                  class="flex-1 bg-red-600 text-white font-medium py-2.5 rounded-lg hover:bg-red-700">
+            Reject
+          </button>
+        </div>
+      </form>
+    </section>
+    {% elif claim.is_open %}
+    <section class="bg-white rounded-2xl shadow p-5 text-sm text-slate-500">
+      Waiting on
+      {% if claim.status == 'MANAGER_REVIEW' or claim.status == 'AI_FLAGGED' %}the branch manager
+      {% elif claim.status == 'FINANCE_REVIEW' %}the finance manager
+      {% elif claim.status == 'ACCOUNTS_REVIEW' %}accounts/finance
+      {% elif claim.status == 'APPROVED' %}payment{% else %}the next approver{% endif %}.
+    </section>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,8 @@
+<div class="bg-white rounded-2xl shadow p-4">
+  <div class="text-3xl font-semibold
+    {% if color == 'green' %}text-green-600{% elif color == 'blue' %}text-blue-600
+    {% elif color == 'amber' %}text-amber-600{% else %}text-slate-700{% endif %}">
+    {{ value }}
+  </div>
+  <div class="text-xs uppercase tracking-wide text-slate-400 mt-1">{{ label }}</div>
+</div>

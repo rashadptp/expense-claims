@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Approve claim · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+
+<div class="max-w-xl mx-auto">
+  <div class="flex items-center gap-2 font-semibold text-lg text-indigo-700 mb-6">
+    <span class="text-2xl">🧾</span> {{ SITE_NAME }}
+  </div>
+
+  {% if error %}
+    <div class="bg-white rounded-2xl shadow p-8 text-center">
+      <div class="text-4xl mb-3">⚠️</div>
+      <p class="text-slate-600">{{ error }}</p>
+      <a href="{% url 'login' %}" class="inline-block mt-5 text-indigo-600 hover:underline">Go to sign in →</a>
+    </div>
+
+  {% elif done %}
+    <div class="bg-white rounded-2xl shadow p-8 text-center">
+      <div class="text-4xl mb-3">{% if done == 'approved' %}✅{% else %}↩️{% endif %}</div>
+      <h1 class="text-xl font-semibold">Claim #{{ claim.pk }} {{ done }}</h1>
+      <p class="text-slate-500 text-sm mt-2">
+        {% if done == 'approved' %}
+          It's now <b>{{ claim.get_status_display }}</b>{% if claim.is_open %} and the next approver has been notified{% endif %}.
+        {% else %}
+          The employee has been notified with your reason.
+        {% endif %}
+      </p>
+      <p class="text-xs text-slate-400 mt-4">Thanks, {{ actor.get_full_name|default:actor.username }}. You can close this tab.</p>
+    </div>
+
+  {% elif stale %}
+    <div class="bg-white rounded-2xl shadow p-8 text-center">
+      <div class="text-4xl mb-3">⌛</div>
+      <h1 class="text-xl font-semibold">Already handled</h1>
+      <p class="text-slate-500 text-sm mt-2">
+        Claim #{{ claim.pk }} has already moved on — it's now
+        <b>{{ claim.get_status_display }}</b>. No action needed.
+      </p>
+    </div>
+
+  {% elif not can %}
+    <div class="bg-white rounded-2xl shadow p-8 text-center">
+      <div class="text-4xl mb-3">🔒</div>
+      <h1 class="text-xl font-semibold">Not your stage</h1>
+      <p class="text-slate-500 text-sm mt-2">
+        This claim isn't waiting on you right now (current status:
+        <b>{{ claim.get_status_display }}</b>).
+      </p>
+    </div>
+
+  {% else %}
+    <p class="text-sm text-slate-500 mb-3">
+      Hi {{ actor.get_full_name|default:actor.username }}, please review claim
+      <b>#{{ claim.pk }}</b> and approve or reject it.
+    </p>
+
+    <div class="bg-white rounded-2xl shadow p-5 mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <div class="font-semibold">{{ claim.employee.get_full_name|default:claim.employee.username }}</div>
+          <div class="text-xs text-slate-400">{{ claim.branch.name }} · {{ claim.item_count }} receipt{{ claim.item_count|pluralize }}</div>
+        </div>
+        <div class="text-right">
+          <div class="text-xl font-bold">{{ claim.currency }} {{ claim.total_amount|floatformat:2|intcomma }}</div>
+          {% include "claims/_status_badge.html" with status=claim.status label=claim.get_status_display %}
+        </div>
+      </div>
+
+      <table class="w-full text-sm border-t border-slate-100 pt-2">
+        <tbody class="divide-y divide-slate-100">
+          {% for it in items %}
+          <tr>
+            <td class="py-1.5">{{ it.vendor|default:"—" }}</td>
+            <td class="py-1.5 text-slate-500">{{ it.get_category_display }}</td>
+            <td class="py-1.5 text-slate-400">{{ it.expense_date }}</td>
+            <td class="py-1.5 text-right font-medium">{{ it.currency }} {{ it.amount|floatformat:2 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% if claim.ai_flags %}
+        <div class="mt-3 space-y-1">
+          {% for f in claim.ai_flags %}
+          <div class="text-xs flex gap-1.5">
+            <span>{% if f.severity == 'critical' %}🔴{% else %}🟡{% endif %}</span>
+            <span>{% if f.item %}<span class="text-slate-400">[{{ f.item }}]</span> {% endif %}{{ f.message }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    {% if form_error %}
+      <div class="bg-red-100 text-red-800 text-sm px-3 py-2 rounded-lg mb-3">{{ form_error }}</div>
+    {% endif %}
+
+    <form method="post" action="{% url 'email_action' %}" class="bg-white rounded-2xl shadow p-5 space-y-3">
+      {% csrf_token %}
+      <input type="hidden" name="t" value="{{ token }}">
+      <label class="block text-sm font-medium">Rejection reason <span class="text-slate-400">(required to reject)</span></label>
+      <textarea name="reason" rows="2" class="w-full rounded-lg border border-slate-300 px-3 py-2"
+        placeholder="Only needed if you reject…"></textarea>
+      <div class="flex flex-col sm:flex-row gap-2">
+        <button name="action" value="approve"
+          class="flex-1 bg-green-600 text-white font-medium py-2.5 rounded-lg hover:bg-green-700">
+          ✓ {{ next_label|default:"Approve" }}
+        </button>
+        <button name="action" value="reject"
+          class="flex-1 bg-red-600 text-white font-medium py-2.5 rounded-lg hover:bg-red-700">
+          ✕ Reject
+        </button>
+      </div>
+      <p class="text-xs text-slate-400 text-center">Signed-in–free secure link · expires in 7 days.</p>
+    </form>
+  {% endif %}
+</div>
+
+{% endblock %}

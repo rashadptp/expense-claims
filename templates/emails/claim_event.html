@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<body style="margin:0;background:#f1f5f9;font-family:Segoe UI,Helvetica,Arial,sans-serif;color:#0f172a;">
+  <div style="max-width:520px;margin:0 auto;padding:24px;">
+    <div style="font-size:20px;font-weight:700;color:#4f46e5;margin-bottom:16px;">
+      {{ site_name }}
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);">
+      <h1 style="font-size:18px;margin:0 0 12px;">{{ heading }}</h1>
+      <p style="font-size:14px;line-height:1.5;color:#334155;margin:0 0 16px;">{{ message }}</p>
+
+      {% if comment %}
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 12px;font-size:13px;color:#991b1b;margin-bottom:16px;">
+        <strong>Reason:</strong> {{ comment }}
+      </div>
+      {% endif %}
+
+      <table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:20px;">
+        <tr><td style="color:#94a3b8;padding:4px 0;">Claim</td><td style="text-align:right;font-weight:600;">#{{ claim.pk }}</td></tr>
+        <tr><td style="color:#94a3b8;padding:4px 0;">Total</td><td style="text-align:right;font-weight:600;">{{ claim.currency }} {{ claim.total_amount }}</td></tr>
+        <tr><td style="color:#94a3b8;padding:4px 0;">Receipts</td><td style="text-align:right;">{{ claim.item_count }}</td></tr>
+        <tr><td style="color:#94a3b8;padding:4px 0;">Branch</td><td style="text-align:right;">{{ claim.branch.name }}</td></tr>
+        <tr><td style="color:#94a3b8;padding:4px 0;">Status</td><td style="text-align:right;">{{ claim.get_status_display }}</td></tr>
+      </table>
+
+      {% if action_url %}
+        <a href="{{ action_url }}" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 20px;border-radius:10px;margin-right:8px;">
+          Approve
+        </a>
+        <a href="{{ action_url }}" style="display:inline-block;background:#fff;color:#dc2626;border:1px solid #fecaca;text-decoration:none;font-weight:600;font-size:14px;padding:10px 20px;border-radius:10px;">
+          Reject
+        </a>
+        <p style="font-size:11px;color:#94a3b8;margin-top:10px;">
+          Opens a secure page with the full claim details — no login needed.
+        </p>
+      {% else %}
+        <a href="{{ url }}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 20px;border-radius:10px;">
+          View the claim
+        </a>
+      {% endif %}
+    </div>
+    <p style="font-size:11px;color:#94a3b8;text-align:center;margin-top:16px;">
+      {{ site_name }} · Automated expense &amp; claims management<br>
+      This is an automated message; please do not reply.
+    </p>
+  </div>
+</body>
+</html>
